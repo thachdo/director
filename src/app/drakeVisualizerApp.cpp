@@ -1,14 +1,9 @@
-// Qt includes
-#include <QApplication>
-
-// director includes
 #include <PythonQt.h>
+#include <QApplication>
 #include "ddPythonManager.h"
-#include "QVTKOpenGLInit.h"
 
 int main(int argc, char **argv)
 {
-  QVTKOpenGLInit init;
   QApplication app(argc, argv);
   ddPythonManager* pythonManager = new ddPythonManager;
   pythonManager->setSysArgv(QApplication::instance()->arguments());
@@ -17,6 +12,10 @@ int main(int argc, char **argv)
   PythonQt::self()->importModule("director");
   pythonManager->executeString("import director.drakevisualizerapp; director.drakevisualizerapp.main(globals())");
 
-  delete pythonManager;
+  // delete pythonManager;
+  // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.
+  // The segfault is fixed in upstream PythonQt, but we can't upgrade to
+  // that version yet because of a compile issue on Ubuntu 12 + Qt 4.8.
+
   return 0;
 }

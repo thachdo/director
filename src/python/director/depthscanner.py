@@ -48,7 +48,7 @@ class DepthScanner(object):
         self.windowToColorBuffer.SetInputBufferTypeToRGB()
         self.windowToColorBuffer.ShouldRerenderOff()
 
-        useBackBuffer = False
+        useBackBuffer = True
         if useBackBuffer:
             self.windowToDepthBuffer.ReadFrontBufferOff()
             self.windowToColorBuffer.ReadFrontBufferOff()
@@ -120,7 +120,7 @@ class DepthScanner(object):
 
         depthImage, polyData = computeDepthImageAndPointCloud(self.getDepthBufferImage(), self.getColorBufferImage(), self.view.camera())
 
-        self.depthScaleFilter.SetInputData(depthImage)
+        self.depthScaleFilter.SetInput(depthImage)
         self.depthScaleFilter.Update()
 
         self.depthImageLookupTable.SetRange(self.depthScaleFilter.GetOutput().GetScalarRange())

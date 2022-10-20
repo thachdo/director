@@ -1,9 +1,3 @@
-find_package(drake QUIET CONFIG)
-if(drake_FOUND)
-  set(DRAKE_LIBRARIES drake::drake)
-  return()
-endif()
-
 if(DRAKE_DIR)
   set(_include_dir_hint ${DRAKE_DIR}/include)
   set(_lib_dir_hint ${DRAKE_DIR}/lib)

@@ -8,7 +8,7 @@ class VTKDRCFILTERS_EXPORT vtkPlaneSegmentation : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkPlaneSegmentation, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkPlaneSegmentation *New();
 
@@ -46,17 +46,15 @@ protected:
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
+                          vtkInformationVector *outputVector);
 
 
   vtkPlaneSegmentation();
-  virtual ~vtkPlaneSegmentation() VTKDRCFILTERS_OVERRIDE;
+  virtual ~vtkPlaneSegmentation();
 
 private:
-  vtkPlaneSegmentation(const vtkPlaneSegmentation&)
-    VTKDRCFILTERS_DELETE_FUNCTION;
-  void operator=(const vtkPlaneSegmentation&)
-    VTKDRCFILTERS_DELETE_FUNCTION;
+  vtkPlaneSegmentation(const vtkPlaneSegmentation&);  // Not implemented.
+  void operator=(const vtkPlaneSegmentation&);  // Not implemented.
 };
 
 #endif

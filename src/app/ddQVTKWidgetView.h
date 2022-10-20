@@ -3,7 +3,6 @@
 
 #include "ddViewBase.h"
 #include "ddAppConfigure.h"
-#include "ddQVTKOpenGLWidgetConfigure.h"
 
 
 class vtkCamera;
@@ -11,6 +10,7 @@ class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkLightKit;
+class QVTKWidget;
 
 class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {
@@ -18,8 +18,11 @@ class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 
 public:
 
-  ddQVTKWidgetView(QWidget* parent=0,bool disableAntiAlias=false);
+  ddQVTKWidgetView(QWidget* parent=0);
+  ddQVTKWidgetView(bool disable_anti_alias, QWidget* parent=0);
   virtual ~ddQVTKWidgetView();
+
+  void init(bool disable_anti_alias);
 
   vtkRenderWindow* renderWindow() const;
   vtkRenderer* renderer() const;
@@ -29,10 +32,8 @@ public:
 
   QList<double> lastTDxMotion() const;
 
-  QVTKOpenGLWidget* vtkWidget() const;
+  QVTKWidget* vtkWidget() const;
   vtkOrientationMarkerWidget* orientationMarkerWidget() const;
-
-  QTimer* renderTimer() const;
 
   void installImageInteractor();
 
@@ -41,8 +42,6 @@ public:
   void setLightKitEnabled(bool enabled);
 
   double getAverageFramesPerSecond();
-
-  static void setAntiAliasing(bool enabled);
 
 signals:
 
@@ -71,8 +70,6 @@ protected:
 
   class ddInternal;
   ddInternal* Internal;
-
-  static bool antiAliasingEnabled;
 
   Q_DISABLE_COPY(ddQVTKWidgetView);
 };

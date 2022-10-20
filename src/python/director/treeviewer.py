@@ -285,7 +285,7 @@ class Geometry(object):
             return
 
         texture = vtk.vtkTexture()
-        texture.SetInputData(image)
+        texture.SetInput(image)
         texture.EdgeClampOn()
         texture.RepeatOn()
 
@@ -459,7 +459,7 @@ class TreeViewer(object):
         msg.format_version_major = 1
         msg.format_version_minor = 0
         data = dict(timestamp=timestamp, **response.toJson())
-        msg.data = bytearray(json.dumps(data), encoding='utf-8')
+        msg.data = json.dumps(data)
         msg.num_bytes = len(msg.data)
         if client_id:
             channel = "DIRECTOR_TREE_VIEWER_RESPONSE_<{:s}>".format(client_id)
@@ -470,7 +470,7 @@ class TreeViewer(object):
     def decodeCommsMsg(self, msg):
         if msg.format == "treeviewer_json":
             if msg.format_version_major == 1 and msg.format_version_minor == 0:
-                data = json.loads(msg.data.decode())
+                data = json.loads(msg.data)
                 return data, ViewerResponse(ViewerStatus.OK, {})
             else:
                 return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,

@@ -31,29 +31,28 @@ class DD_APP_EXPORT vtkTDxInteractorStyleCallback : public vtkTDxInteractorStyle
 public:
   static vtkTDxInteractorStyleCallback *New();
   vtkTypeMacro(vtkTDxInteractorStyleCallback, vtkTDxInteractorStyle);
-  void PrintSelf(ostream& os, vtkIndent indent) DD_APP_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkGetVector3Macro(Translation, double);
   vtkGetVector4Macro(AngleAxis, double);
 
-  virtual void OnMotionEvent(vtkTDxMotionEventInfo *motionInfo) DD_APP_OVERRIDE;
+  virtual void OnMotionEvent(vtkTDxMotionEventInfo *motionInfo);
 
-  virtual void OnButtonPressedEvent(int button) DD_APP_OVERRIDE;
+  virtual void OnButtonPressedEvent(int button);
 
-  virtual void OnButtonReleasedEvent(int button) DD_APP_OVERRIDE;
+  virtual void OnButtonReleasedEvent(int button);
 
 protected:
 
   vtkTDxInteractorStyleCallback();
-  virtual ~vtkTDxInteractorStyleCallback() DD_APP_OVERRIDE;
+  virtual ~vtkTDxInteractorStyleCallback();
 
   int Button;
   double Translation[3];
   double AngleAxis[4];
 
 private:
-  vtkTDxInteractorStyleCallback(const vtkTDxInteractorStyleCallback&)
-    DD_APP_DELETE_FUNCTION;
-  void operator=(const vtkTDxInteractorStyleCallback&) DD_APP_DELETE_FUNCTION;
+  vtkTDxInteractorStyleCallback(const vtkTDxInteractorStyleCallback&);  // Not implemented.
+  void operator=(const vtkTDxInteractorStyleCallback&);  // Not implemented.
 };
 #endif

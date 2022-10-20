@@ -68,7 +68,6 @@ class Flyer(TimerCallback):
         c = self.getCameraCopy()
         newFocalPoint = np.array(newFocalPoint)
         oldFocalPoint = np.array(c.GetFocalPoint())
-        oldViewUp = np.array(c.GetViewUp())
         oldPosition = np.array(c.GetPosition())
 
         if newPosition is None:
@@ -81,7 +80,7 @@ class Flyer(TimerCallback):
 
         c.SetFocalPoint(newFocalPoint)
         c.SetPosition(newPosition)
-        c.SetViewUp(oldViewUp)
+        c.SetViewUp([0.0, 0.0, 1.0])
 
         self.interp.AddCamera(1.0, c)
         self.startTime = time.time()

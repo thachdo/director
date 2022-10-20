@@ -12,7 +12,7 @@ class VTKDRCFILTERS_EXPORT vtkSurfaceFitter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSurfaceFitter, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkSurfaceFitter *New();
 
@@ -59,15 +59,15 @@ protected:
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
+                          vtkInformationVector *outputVector);
 
 
   vtkSurfaceFitter();
-  virtual ~vtkSurfaceFitter() VTKDRCFILTERS_OVERRIDE;
+  virtual ~vtkSurfaceFitter();
 
 private:
-  vtkSurfaceFitter(const vtkSurfaceFitter&) VTKDRCFILTERS_DELETE_FUNCTION;
-  void operator=(const vtkSurfaceFitter&) VTKDRCFILTERS_DELETE_FUNCTION;
+  vtkSurfaceFitter(const vtkSurfaceFitter&);  // Not implemented.
+  void operator=(const vtkSurfaceFitter&);  // Not implemented.
 };
 
 #endif

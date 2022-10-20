@@ -1,51 +1,38 @@
-from director.shallowCopy import shallowCopy
-import director.vtkAll as vtk
-from vtk.util import numpy_support
+import vtkAll as vtk
+from shallowCopy import shallowCopy
 import numpy as np
 
+try:
+    from vtk.util import numpy_support
+except ImportError:
+    from paraview import numpy_support
 
-def numpyToPolyData(pts, pointData=None, createVertexCells=True):
-
+def numpyToPolyData(pts, pointData=None, createVertexCells=False):
     pd = vtk.vtkPolyData()
-    pd.SetPoints(getVtkPointsFromNumpy(pts.copy()))
+    pd.SetPoints(vtk.vtkPoints())
+    # Makes a deep copy
+    pd.GetPoints().SetData(getVtkFromNumpy(pts.copy()))
 
     if pointData is not None:
         for key, value in pointData.iteritems():
             addNumpyToVtk(pd, value.copy(), key)
 
     if createVertexCells:
-        f = vtk.vtkVertexGlyphFilter()
-        f.SetInputData(pd)
-        f.Update()
-        pd = shallowCopy(f.GetOutput())
+        cellIds = vtk.vtkIdList()
+        cellIds.SetNumberOfIds(pd.GetNumberOfPoints())
+        for i in range(pd.GetNumberOfPoints()):
+            cellIds.SetId(i, i)
+        cells = vtk.vtkCellArray()
+        cells.InsertNextCell(cellIds)
+        pd.SetVerts(cells)
 
     return pd
 
-
-def numpyToImageData(img, flip=True, vtktype=vtk.VTK_UNSIGNED_CHAR):
-    if flip:
-        img = np.flipud(img)
-    height, width, numChannels = img.shape
-    image = vtk.vtkImageData()
-    image.SetDimensions(width, height, 1)
-    image.AllocateScalars(vtktype, numChannels)
-    scalars = getNumpyFromVtk(image, 'ImageScalars')
-    if numChannels > 1:
-        scalars[:] = img.reshape(width*height, numChannels)[:]
-    else:
-        scalars[:] = img.reshape(width*height)[:]
-    return image
-
-
-def getNumpyFromVtk(dataObj, arrayName='Points', arrayType='points'):
-    assert arrayType in ('points', 'cells')
-
+def getNumpyFromVtk(dataObj, arrayName='Points'):
     if arrayName == 'Points':
         vtkArray = dataObj.GetPoints().GetData()
-    elif arrayType == 'points':
-        vtkArray = dataObj.GetPointData().GetArray(arrayName)
     else:
-        vtkArray = dataObj.GetCellData().GetArray(arrayName)
+        vtkArray = dataObj.GetPointData().GetArray(arrayName)
 
     if not vtkArray:
         raise KeyError('Array not found')
@@ -61,7 +48,19 @@ def getVtkPointsFromNumpy(numpyArray):
 
 
 def getVtkPolyDataFromNumpyPoints(points):
-    return numpyToPolyData(points)
+    '''
+    Given an Nx3 array of xyz points
+    Return a new vtkPolyData containing points and vertex cells.
+    If the input points is not float64 it will be converted first.
+    '''
+
+    if points.dtype != np.float64:
+        points = points.astype(np.float64)
+
+    polyData = vtk.vtkPolyData()
+    polyData.SetPoints(getVtkPointsFromNumpy(points))
+    vtk.vtkPCLConversions.AddVertexCells(polyData)
+    return polyData
 
 
 def getVtkFromNumpy(numpyArray):
@@ -76,13 +75,9 @@ def getVtkFromNumpy(numpyArray):
     return vtkArray
 
 
-def addNumpyToVtk(dataObj, numpyArray, arrayName, arrayType='points'):
-    assert arrayType in ('points', 'cells')
+def addNumpyToVtk(dataObj, numpyArray, arrayName):
+    assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
+
     vtkArray = getVtkFromNumpy(numpyArray)
     vtkArray.SetName(arrayName)
-    if arrayType == 'points':
-        assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
-        dataObj.GetPointData().AddArray(vtkArray)
-    else:
-        assert dataObj.GetNumberOfCells() == numpyArray.shape[0]
-        dataObj.GetCellData().AddArray(vtkArray)
+    dataObj.GetPointData().AddArray(vtkArray)

@@ -1,3 +1,4 @@
+find_package(PythonLibs REQUIRED)
 find_library(PORTMIDI_LIBRARY portmidi "portmidi library")
 find_path(PORTMIDI_INCLUDE_DIR portmidi.h "portmidi include dir")
 mark_as_advanced(PORTMIDI_LIBRARY PORTMIDI_INCLUDE_DIR)

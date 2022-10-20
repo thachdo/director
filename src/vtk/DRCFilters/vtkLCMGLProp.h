@@ -36,31 +36,31 @@ public:
   // Description:
   // Standard methods for the class.
   vtkTypeMacro(vtkLCMGLProp,vtkProp);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   void UpdateGLData(const char* data);
 
-  virtual double *GetBounds() VTKDRCFILTERS_OVERRIDE;
+  virtual double *GetBounds();
 
   // Description:
   // Methods supporting, and required by, the rendering process.
-  virtual void ReleaseGraphicsResources(vtkWindow*) VTKDRCFILTERS_OVERRIDE;
-  virtual int RenderOpaqueGeometry(vtkViewport*) VTKDRCFILTERS_OVERRIDE;
-  virtual int RenderOverlay(vtkViewport*) VTKDRCFILTERS_OVERRIDE;
-  virtual int RenderTranslucentPolygonalGeometry(vtkViewport*) VTKDRCFILTERS_OVERRIDE;
-  virtual int HasTranslucentPolygonalGeometry() VTKDRCFILTERS_OVERRIDE;
+  virtual void ReleaseGraphicsResources(vtkWindow*);
+  virtual int RenderOpaqueGeometry(vtkViewport*);
+  virtual int RenderOverlay(vtkViewport*);
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
+  virtual int HasTranslucentPolygonalGeometry();
 
 protected:
   vtkLCMGLProp();
-  virtual ~vtkLCMGLProp() VTKDRCFILTERS_OVERRIDE;
+  ~vtkLCMGLProp();
 
 private:
 
   class vtkInternal;
   vtkInternal* Internal;
 
-  vtkLCMGLProp(const vtkLCMGLProp&) VTKDRCFILTERS_DELETE_FUNCTION;
-  void operator=(const vtkLCMGLProp&) VTKDRCFILTERS_DELETE_FUNCTION;
+  vtkLCMGLProp(const vtkLCMGLProp&);  //Not implemented
+  void operator=(const vtkLCMGLProp&);  //Not implemented
 };
 
 #endif

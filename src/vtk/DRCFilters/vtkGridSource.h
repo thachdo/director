@@ -42,7 +42,7 @@ class VTKDRCFILTERS_EXPORT vtkGridSource : public vtkPolyDataAlgorithm
 public:
   static vtkGridSource *New();
   vtkTypeMacro(vtkGridSource, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkSetMacro(GridSize, int);
   vtkGetMacro(GridSize, int);
@@ -68,11 +68,11 @@ public:
 
 protected:
   vtkGridSource();
-  virtual ~vtkGridSource() VTKDRCFILTERS_OVERRIDE;
+  ~vtkGridSource();
 
   int RequestData(vtkInformation *,
                   vtkInformationVector **,
-                  vtkInformationVector *) VTKDRCFILTERS_OVERRIDE;
+                  vtkInformationVector *);
 
   bool ArcsEnabled;
   bool SurfaceEnabled;

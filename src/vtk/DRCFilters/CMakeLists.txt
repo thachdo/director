@@ -14,11 +14,14 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkInteractorStyleTerrain2.cxx
-  vtkPickCenteredInteractorStyle.cxx
+  vtkDepthImageProcessingPass.cxx
+  vtkEDLShading.cxx
+  vtkOBJImporter.cxx
   )
 
 # extra source files to compile but do not python wrap
 set(EXTRA_SRCS
+  vtkOBJImporterInternals.cxx
   )
 
 #####
@@ -38,7 +41,7 @@ set(GLSL_SRCS
 # Create custom commands to encode each glsl file into a C string literal
 # in a header file
 # -----------------------------------------------------------------------------
-if(NOT TARGET vtkEncodeString)
+if(NOT EXISTS "${VTK_ENCODESTRING_EXE}")
   message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
 endif()
 
@@ -48,7 +51,7 @@ foreach(file ${GLSL_SRCS})
   add_custom_command(
     OUTPUT ${res}
     DEPENDS ${src}
-    COMMAND vtkEncodeString
+    COMMAND ${VTK_ENCODESTRING_EXE}
     ARGS ${res} ${src} ${file}
     )
   set(EXTRA_SRCS ${EXTRA_SRCS} ${res})
@@ -58,14 +61,9 @@ endforeach(file)
 #####
 
 set(VTK_LIBRARIES
-  vtkInteractionWidgets
-  vtkInteractionStyle
-  vtkRenderingFreeType
-  vtkRenderingCore
-  vtkRendering${VTK_RENDERING_BACKEND}
-  vtkFiltersExtraction
-  vtkFiltersCore
-  vtkCommonCore
+  vtkFiltering
+  vtkIO
+  vtkWidgets
   )
 
 
@@ -80,7 +78,7 @@ if (USE_DRC)
 
   # requires libbot, lcm, eigen, drc lcmtypes
 
-  find_package(LibBot REQUIRED MODULE)
+  find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
 
   find_package(Eigen REQUIRED)
@@ -113,6 +111,7 @@ if (USE_DRC_MAPS)
   include_directories(${PCL_INCLUDE_DIRS})
   include_directories(${MAPS_INCLUDE_DIRS})
   list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
+  use_cpp11()
 endif()
 
 if (USE_DRC_PLANE_SEG)
@@ -128,11 +127,12 @@ if (USE_DRC_PLANE_SEG)
   include_directories(${PLANE_SEG_INCLUDE_DIRS})
   include_directories(${PCL_INCLUDE_DIRS})
   list(APPEND deps ${PLANE_SEG_LIBRARIES} ${PCL_LIBRARIES})
+  use_cpp11()
 endif()
 
 if(USE_LCMGL)
 
-  find_package(LibBot REQUIRED MODULE)
+  find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
   list(APPEND sources vtkLCMGLProp.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
@@ -173,21 +173,16 @@ if(pkg_deps)
 endif()
 
 install(TARGETS ${library_name}
-    EXPORT ${DD_TARGETS_NAME}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
 
-if(NOT VTK_WRAP_PYTHON)
-  message(FATAL_ERROR "VTK was compiled without Python support. "
-    "VTK_WRAP_PYTHON is OFF. You must use a version of VTK with Python. "
-    "VTK_DIR is: ${VTK_DIR}")
+if(VTK_WRAP_PYTHON)
+  find_package(PythonLibs 2.7 REQUIRED)
+  include_directories(${PYTHON_INCLUDE_DIR})
+  include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
+  wrap_python(${library_name} "${sources}")
+  set_target_properties(${library_name}Python PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
+  target_link_libraries(${library_name}Python ${PYTHON_LIBRARIES})
+  target_link_libraries(${library_name}PythonD ${PYTHON_LIBRARIES})
 endif()
-
-include_directories(${PYTHON_INCLUDE_DIR})
-include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
-wrap_python(${library_name} "${sources}")
-set_target_properties(${library_name}Python
-  PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
-target_link_libraries(${library_name}Python ${PYTHON_LIBRARIES})
-target_link_libraries(${library_name}PythonD ${PYTHON_LIBRARIES})

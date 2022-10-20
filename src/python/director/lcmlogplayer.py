@@ -1,6 +1,5 @@
 from director import lcmUtils
 from director.timercallback import TimerCallback
-from director.qtutils import BlockSignals
 
 import lcm
 import numpy as np
@@ -31,7 +30,7 @@ class LcmLogPlayer(object):
         filepos = self.filePositions[self.nextEventIndex]
         self.log.seek(filepos)
 
-    def advanceTime(self, playLength, onFrame=None):
+    def advanceTime(self, playLength):
 
         numEvents = len(self.timestamps)
         if self.nextEventIndex >= numEvents:
@@ -51,8 +50,6 @@ class LcmLogPlayer(object):
 
             good = (self.nextEventIndex < numEvents
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
-            if onFrame and good:
-                onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
 
     def skipToTime(self, timeRequest, playLength=0.0):
         self.resetPlayPosition(timeRequest)
@@ -65,7 +62,7 @@ class LcmLogPlayer(object):
     def stop(self):
         self.timer.stop()
 
-    def playback(self, startTime, playLength, onFrame=None, onStop=None):
+    def playback(self, startTime, playLength):
 
         self.resetPlayPosition(startTime)
 
@@ -74,15 +71,10 @@ class LcmLogPlayer(object):
 
         def onTick():
             elapsed = self.timer.elapsed * self.playbackFactor
-            self.advanceTime(elapsed, onFrame)
+            self.advanceTime(elapsed)
 
             good = (self.nextEventIndex < len(self.timestamps)
                     and self.timestamps[self.nextEventIndex] <= endTimestamp)
-
-            if onFrame and good:
-                onFrame(self.timestamps[self.nextEventIndex] / 1.e6)
-            if onStop and not good:
-                onStop()
 
             return bool(good) #convert numpy.bool to bool
 
@@ -150,59 +142,29 @@ class LcmLogPlayerGui(object):
         stopButton = QtGui.QPushButton('Stop')
         slider = QtGui.QSlider(QtCore.Qt.Horizontal)
         slider.maximum = int(logPlayer.getEndTime()*100)
-        text = QtGui.QLineEdit()
-        text.text = '0.0'
         playButton.connect('clicked()', self.onPlay)
         stopButton.connect('clicked()', self.onStop)
         slider.connect('valueChanged(int)', self.onSlider)
-        text.connect('returnPressed()', self.onText)
 
         l = QtGui.QHBoxLayout(w)
         l.addWidget(slider)
-        l.addWidget(text)
         l.addWidget(playButton)
         l.addWidget(stopButton)
 
         self.slider = slider
-        self.text = text
         self.widget = w
         self.widget.show()
 
-    def _getSliderTime(self, value=None):
-        if value is None:
-            value = self.slider.value
-        t = self.logPlayer.getEndTime()*value/self.slider.maximum
-        return t
-
-    def _getSliderValue(self, t):
-        value = t / self.logPlayer.getEndTime() * self.slider.maximum
-        return int(round(value))
-
-    def _updateTime(self, t):
-        with BlockSignals(self.slider, self.text):
-            self.slider.value = self._getSliderValue(t)
-            self.text.text = str(t)
-
     def onPlay(self):
-        self.logPlayer.playback(self._getSliderTime(), self.logPlayer.getEndTime(), self._updateTime)
+        self.logPlayer.playback(0.0, self.logPlayer.getEndTime())
 
     def onStop(self):
         self.logPlayer.timer.stop()
 
-    def skipTo(self, t):
-        self._updateTime(t)
+    def onSlider(self, value):
+        t = self.logPlayer.getEndTime()*value/self.slider.maximum
         self.logPlayer.skipToTime(t, playLength=0.0)
 
-    def onSlider(self, value):
-        t = self._getSliderTime(value)
-        self.skipTo(t)
-
-    def onText(self, *args):
-        try:
-            t = float(self.text.text)
-            self.skipTo(t)
-        except ValueError:
-            pass
 
 if __name__ == '__main__':
 

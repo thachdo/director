@@ -29,30 +29,29 @@ class DD_APP_EXPORT vtkSimpleActorInteractor : public vtkInteractorStyleTrackbal
 public:
   static vtkSimpleActorInteractor *New();
   vtkTypeMacro(vtkSimpleActorInteractor, vtkInteractorStyleTrackballActor);
-  void PrintSelf(ostream& os, vtkIndent indent) DD_APP_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Override parent class methods to remap the interaction style
-  virtual void OnLeftButtonDown() DD_APP_OVERRIDE;
-  virtual void OnLeftButtonUp() DD_APP_OVERRIDE;
-  virtual void OnMiddleButtonDown() DD_APP_OVERRIDE;
-  virtual void OnMiddleButtonUp() DD_APP_OVERRIDE;
-  virtual void OnRightButtonDown() DD_APP_OVERRIDE;
-  virtual void OnRightButtonUp() DD_APP_OVERRIDE;
+  virtual void OnLeftButtonDown();
+  virtual void OnLeftButtonUp();
+  virtual void OnMiddleButtonDown();
+  virtual void OnMiddleButtonUp();
+  virtual void OnRightButtonDown();
+  virtual void OnRightButtonUp();
 
   // Description:
   // Override parent class method to dolly camera instead of actor
-  virtual void Dolly() DD_APP_OVERRIDE;
+  virtual void Dolly();
 
 protected:
 
   vtkSimpleActorInteractor();
-  virtual ~vtkSimpleActorInteractor() DD_APP_OVERRIDE;
+  virtual ~vtkSimpleActorInteractor();
 
 
 private:
-  vtkSimpleActorInteractor(const vtkSimpleActorInteractor&)
-    DD_APP_DELETE_FUNCTION;
-  void operator=(const vtkSimpleActorInteractor&) DD_APP_DELETE_FUNCTION;
+  vtkSimpleActorInteractor(const vtkSimpleActorInteractor&);  // Not implemented.
+  void operator=(const vtkSimpleActorInteractor&);  // Not implemented.
 };
 #endif

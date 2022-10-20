@@ -84,19 +84,18 @@ class DRCArgParser(object):
             import pydrake
         except ImportError:
             return False
-        if 'DRAKE_RESOURCE_ROOT' not in os.environ:
-            return False
         return True
 
     def addDrakeConfigShortcuts(self, directorConfig):
 
         import pydrake
+        drakePath = pydrake.getDrakePath()
 
         directorConfig.add_argument(
             '--iiwa-drake',
             dest='directorConfigFile',
             action='store_const',
-            const=pydrake.common.FindResourceOrThrow('drake/examples/kuka_iiwa_arm/director_config.json'),
+            const=os.path.join(drakePath, 'examples/kuka_iiwa_arm/director_config.json'),
             help='Use KUKA IIWA from drake/examples')
 
     def addOpenHumanoidsConfigShortcuts(self, directorConfig):

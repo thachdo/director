@@ -1,7 +1,6 @@
 #include <QApplication>
 #include "ddMainWindow.h"
 #include "ddPythonManager.h"
-#include "QVTKOpenGLInit.h"
 
 #define USE_TDX 0
 #if USE_TDX
@@ -10,7 +9,6 @@
 
 int main(int argc, char **argv)
 {
-  QVTKOpenGLInit init;
 #if USE_TDX
   QVTKApplication app(argc, argv);
 #else
@@ -27,7 +25,11 @@ int main(int argc, char **argv)
   int result = app.exec();
 
   delete window;
-  delete pythonManager;
+
+  // delete pythonManager;
+  // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.
+  // The segfault is fixed in upstream PythonQt, but we can't upgrade to
+  // that version yet because of a compile issue on Ubuntu 12 + Qt 4.8.
 
   return result;
 }

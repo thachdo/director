@@ -31,7 +31,7 @@ def to_lcm(data):
     msg.format = "treeviewer_json"
     msg.format_version_major = 1
     msg.format_version_minor = 0
-    msg.data = bytearray(json.dumps(data), encoding='utf-8')
+    msg.data = json.dumps(data)
     msg.num_bytes = len(msg.data)
     return msg
 
@@ -125,20 +125,6 @@ class Triad(BaseGeometry):
             "tube": self.tube
         }
 
-class PointCloud(BaseGeometry):
-    __slots__ = ["points", "channels"]
-    def __init__(self, points, channels={}):
-        self.points = points
-        self.channels = channels
-
-    def serialize(self):
-        return {
-            "type": "pointcloud",
-            "points": [list(p) for p in self.points],
-            "channels": {name: [list(c) for c in values] for (name, values) in self.channels.iteritems()}
-        }
-
-
 class PolyLine(BaseGeometry):
     def __init__(self, points, radius=0.01, closed=False,
                  start_head=False, end_head=False,
@@ -154,7 +140,7 @@ class PolyLine(BaseGeometry):
     def serialize(self):
         data = {
             "type": "line",
-            "points": [list(p) for p in self.points],
+            "points": self.points,
             "radius": self.radius,
             "closed": self.closed
         }
@@ -311,7 +297,7 @@ class CoreVisualizer(object):
 
     def _handle_response(self, channel, msgdata):
         msg = viewer2_comms_t.decode(msgdata)
-        data = json.loads(msg.data.decode())
+        data = json.loads(msg.data)
         if data["status"] == 0:
             pass
         elif data["status"] == 1:
@@ -320,7 +306,7 @@ class CoreVisualizer(object):
                 self.queue.settransform.add(path)
         else:
             raise ValueError(
-                "Unhandled response from viewer: {}".format(msg.data.decode()))
+                "Unhandled response from viewer: {}".format(msg.data))
 
     def setgeometry(self, path, geomdata):
         if isinstance(geomdata, BaseGeometry):

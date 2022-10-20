@@ -52,12 +52,12 @@ class ComponentFactory(object):
         self.componentFields = {}
         self.defaultOptions = FieldContainer()
 
-    def register(self, factoryClass, disableAntiAlias=False):
+    def register(self, factoryClass, disable_anti_alias=False):
 
         fact = factoryClass()
-        if disableAntiAlias:
+        if disable_anti_alias:
             fact.disableAntiAlias()
-
+            
         components, disabledComponents = fact.getComponents()
 
         for name in sorted(components.keys()):
@@ -154,8 +154,8 @@ class ComponentFactory(object):
         return fields
 
     def printComponentFields(self):
-        for k, v in sorted(self.componentFields.items()):
-            print '%s:' % k
+        for k, v in self.componentFields.iteritems():
+            print k, 'exports fields:'
             for name in v._fields:
                 print '  ', name
 

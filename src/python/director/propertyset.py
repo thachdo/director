@@ -82,6 +82,9 @@ class PropertySet(object):
     def hasProperty(self, propertyName):
         return propertyName in self._properties
 
+    def assertProperty(self, propertyName):
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
+
     def connectPropertyChanged(self, func):
         return self.callbacks.connect(self.PROPERTY_CHANGED_SIGNAL, func)
 
@@ -101,16 +104,19 @@ class PropertySet(object):
         self.callbacks.disconnect(callbackId)
 
     def getProperty(self, propertyName):
+        self.assertProperty(propertyName)
         return self._properties[propertyName]
 
     def getPropertyEnumValue(self, propertyName):
-        attributes = self._attributes[propertyName]
-        return attributes.enumNames[self._properties[propertyName]]
+        self.assertProperty(propertyName)
+        return self._attributes[propertyName].enumNames[self._properties[propertyName]]
 
     def removeProperty(self, propertyName):
+        assert self.hasProperty(propertyName)
+        alternateName = cleanPropertyName(propertyName)
+        del self._alternateNames[alternateName]
         del self._properties[propertyName]
         del self._attributes[propertyName]
-        del self._alternateNames[cleanPropertyName(propertyName)]
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
         alternateName = cleanPropertyName(propertyName)
@@ -119,9 +125,10 @@ class PropertySet(object):
 
         propertyValue = fromQColor(propertyName, propertyValue)
 
+        self._alternateNames[alternateName] = propertyName
         self._properties[propertyName] = propertyValue
         self._attributes[propertyName] = attributes or PropertyAttributes()
-        self._alternateNames[alternateName] = propertyName
+
         self.callbacks.process(self.PROPERTY_ADDED_SIGNAL, self, propertyName)
 
     def setPropertyIndex(self, propertyName, newIndex):
@@ -134,37 +141,38 @@ class PropertySet(object):
         self._properties = OrderedDict([items[i] for i in inds])
 
     def setProperty(self, propertyName, propertyValue):
-        previousValue = self._properties[propertyName]
+        self.assertProperty(propertyName)
         propertyValue = fromQColor(propertyName, propertyValue)
-        if propertyValue == previousValue:
-          return
 
         names = self.getPropertyAttribute(propertyName, 'enumNames')
         if names and type(propertyValue) != int:
             propertyValue = names.index(propertyValue)
 
+        self.oldPropertyValue = (propertyName, self.getProperty(propertyName))
         self._properties[propertyName] = propertyValue
+        self.oldPropertyValue = None
         self.callbacks.process(self.PROPERTY_CHANGED_SIGNAL, self, propertyName)
 
     def getPropertyAttribute(self, propertyName, propertyAttribute):
-        attributes = self._attributes[propertyName]
-        return attributes[propertyAttribute]
+        self.assertProperty(propertyName)
+        return getattr(self._attributes[propertyName], propertyAttribute)
 
     def setPropertyAttribute(self, propertyName, propertyAttribute, value):
+        self.assertProperty(propertyName)
         attributes = self._attributes[propertyName]
-        if attributes[propertyAttribute] != value:
-            attributes[propertyAttribute] = value
-            self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
+        assert hasattr(attributes, propertyAttribute), "Missing attribute: {:s}".format(propertyAttribute)
+        setattr(attributes, propertyAttribute, value)
+        self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
 
     def __getattribute__(self, name):
         try:
-            return object.__getattribute__(self, name)
-        except AttributeError as exc:
             alternateNames = object.__getattribute__(self, '_alternateNames')
             if name in alternateNames:
                 return object.__getattribute__(self, 'getProperty')(alternateNames[name])
             else:
-                raise exc
+                raise AttributeError()
+        except AttributeError:
+            return object.__getattribute__(self, name)
 
 
 class PropertyPanelHelper(object):
@@ -272,15 +280,13 @@ class PropertyPanelHelper(object):
 
 
 class PropertyPanelConnector(object):
-
     def __init__(self, propertySet, propertiesPanel, propertyNamesToAdd=None):
         self.propertySet = propertySet
         self.propertyNamesToAdd = propertyNamesToAdd
         self.propertiesPanel = propertiesPanel
-        self.connections = []
-        self.connections.append(self.propertySet.connectPropertyAdded(self._onPropertyAdded))
-        self.connections.append(self.propertySet.connectPropertyChanged(self._onPropertyChanged))
-        self.connections.append(self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged))
+        self.propertySet.connectPropertyAdded(self._onPropertyAdded)
+        self.propertySet.connectPropertyChanged(self._onPropertyChanged)
+        self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
         self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
 
         self.timer = TimerCallback()
@@ -291,10 +297,7 @@ class PropertyPanelConnector(object):
         self._blockSignals = False
 
     def cleanup(self):
-        self.timer.callback = None
         self.propertiesPanel.disconnect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
-        for connection in self.connections:
-            self.propertySet.callbacks.disconnect(connection)
 
     def _rebuild(self):
         if not self.timer.singleShotTimer.isActive():

@@ -29,7 +29,7 @@ class VTKDRCFILTERS_EXPORT vtkMultisenseSource : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkMultisenseSource, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkMultisenseSource *New();
 
@@ -67,22 +67,22 @@ protected:
 
   virtual int RequestInformation(vtkInformation *request,
                          vtkInformationVector **inputVector,
-                         vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
+                         vtkInformationVector *outputVector);
 
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
-                          vtkInformationVector *outputVector) VTKDRCFILTERS_OVERRIDE;
+                          vtkInformationVector *outputVector);
 
   vtkMultisenseSource();
-  virtual ~vtkMultisenseSource() VTKDRCFILTERS_OVERRIDE;
+  virtual ~vtkMultisenseSource();
 
   double DistanceRange[2];
   double HeightRange[2];
   double EdgeAngleThreshold;
 
 private:
-  vtkMultisenseSource(const vtkMultisenseSource&) VTKDRCFILTERS_DELETE_FUNCTION;
-  void operator=(const vtkMultisenseSource&) VTKDRCFILTERS_DELETE_FUNCTION;
+  vtkMultisenseSource(const vtkMultisenseSource&);  // Not implemented.
+  void operator=(const vtkMultisenseSource&);  // Not implemented.
 
   class vtkInternal;
   vtkInternal * Internal;

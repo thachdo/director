@@ -248,8 +248,12 @@ class PyDrakeIkServer(object):
 
         options = pydrakeik.IKoptions(self.rigidBodyTree)
         options.setQ(np.diag(fields.positionCosts))
-        #options.setQv()
-        #options.setQa()
+
+
+        velCost = np.array(fields.positionCosts)*0.05
+        accelCost = np.array(fields.positionCosts)*0.05
+        options.setQv(np.diag(velCost))
+        options.setQa(np.diag(velCost))
         #options.setDebug(True)
 
         options.setMajorOptimalityTolerance(fields.options.majorOptimalityTolerance)
@@ -261,7 +265,7 @@ class PyDrakeIkServer(object):
 
         # for ik pointwise, whether to use q_seed at each point (False),
         # or to use the solution from the previous point (True)
-        #options.setSequentialSeedFlag(True)
+        options.setSequentialSeedFlag(False)
 
         # for ik traj, if initial state is not fixed
         # then here you can set the lb/ub of initial q
@@ -270,8 +274,9 @@ class PyDrakeIkServer(object):
 
         # for ik traj, set lower and upper bound of
         # initial and final velocity
-        #options.setqd0(lb, ub)
-        #options.setqdf(lb, ub)
+        zeros = np.zeros(len(fields.positionCosts))
+        options.setqd0(zeros, zeros)
+        options.setqdf(zeros, zeros)
 
         # for ik traj, additional time samples in addition to knot points
         # to check constraints
@@ -279,13 +284,22 @@ class PyDrakeIkServer(object):
 
         return options
 
+    def getTspanRange(self, c):
+        '''Constraint tspan fields may contain more than two
+        time points.  The extra time points in a constraint
+        tspan array are used for convenience to define additional
+        knot points for the ik traj solve.  This function returns
+        just the start and end times of the tspan array.
+        '''
+        return np.array([c.tspan[0], c.tspan[-1]], dtype=float)
+
     def handleFixedLinkFromRobotPoseConstraint(self, c, fields):
 
         bodyId = self.bodyNameToId[c.linkName]
         pose = np.asarray(fields.poses[c.poseName], dtype=float)
         pointInBodyFrame = np.zeros(3)
         tolerance = np.radians(c.angleToleranceInDegrees)
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
 
         bodyToWorld = self.computeBodyToWorld(pose, c.linkName, pointInBodyFrame)
         bodyPos = transformUtils.transformations.translation_from_matrix(bodyToWorld)
@@ -306,7 +320,7 @@ class PyDrakeIkServer(object):
         referenceFrame = transformUtils.getNumpyFromTransform(c.referenceFrame)
         lowerBound = np.asarray(c.positionTarget, dtype=float) + c.lowerBound
         upperBound = np.asarray(c.positionTarget, dtype=float) + c.upperBound
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
 
         pc = pydrakeik.WorldPositionInFrameConstraint(self.rigidBodyTree, bodyId, pointInBodyFrame, referenceFrame, lowerBound, upperBound, tspan)
 
@@ -316,7 +330,7 @@ class PyDrakeIkServer(object):
 
         bodyId = self.bodyNameToId[c.linkName]
         tolerance = np.radians(c.angleToleranceInDegrees)
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
 
         if isinstance(c.quaternion, vtk.vtkTransform):
             quat = transformUtils.getNumpyFromTransform(c.quaternion)
@@ -331,7 +345,7 @@ class PyDrakeIkServer(object):
     def handleWorldGazeDirConstraint(self, c, fields):
 
         bodyId = self.bodyNameToId[c.linkName]
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
         worldAxis = np.asarray(c.targetAxis, dtype=float)
         bodyAxis = np.asarray(c.bodyAxis, dtype=float)
         coneThreshold = c.coneThreshold
@@ -341,21 +355,9 @@ class PyDrakeIkServer(object):
         wc = pydrakeik.WorldGazeDirConstraint(self.rigidBodyTree, bodyId, bodyAxis, worldAxis, coneThreshold, tspan)
         return wc
 
-    def handleWorldGazeTargetConstraint(self, c, fields):
-
-        bodyId = self.bodyNameToId[c.linkName]
-        tspan = np.asarray(c.tspan, dtype=float)
-        bodyAxis = np.asarray(c.axis, dtype=float)
-        gazeOrigin = np.asarray(c.bodyPoint, dtype=float)
-        targetPosition = np.asarray(c.worldPoint, dtype=float)
-        coneThreshold = c.coneThreshold
-
-        wc = pydrakeik.WorldGazeTargetConstraint(self.rigidBodyTree, bodyId, bodyAxis, targetPosition, gazeOrigin, coneThreshold, tspan)
-        return wc
-
     def handlePostureConstraint(self, c, fields):
 
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
 
         pose = np.asarray(fields.poses[c.postureName], dtype=float)
         positionInds = np.array([self.positionNameToId[name] for name in c.joints], dtype=np.int32)
@@ -373,7 +375,7 @@ class PyDrakeIkServer(object):
         # shrinkFactor should not be a class member but an instance member
         c.shrinkFactor = fields.options.quasiStaticShrinkFactor
 
-        tspan = np.asarray(c.tspan, dtype=float)
+        tspan = self.getTspanRange(c)
         shrinkFactor = c.shrinkFactor
         active = c.leftFootEnabled or c.rightFootEnabled
         leftFootBodyId = self.bodyNameToId[c.leftFootLinkName]
@@ -403,7 +405,6 @@ class PyDrakeIkServer(object):
             ikconstraints.FixedLinkFromRobotPoseConstraint : self.handleFixedLinkFromRobotPoseConstraint,
             ikconstraints.QuatConstraint : self.handleQuatConstraint,
             ikconstraints.WorldGazeDirConstraint : self.handleWorldGazeDirConstraint,
-            ikconstraints.WorldGazeTargetConstraint: self.handleWorldGazeTargetConstraint,
             ikconstraints.PostureConstraint : self.handlePostureConstraint,
             ikconstraints.QuasiStaticConstraint : self.handleQuasiStaticConstraint,
             }
@@ -570,12 +571,14 @@ class PyDrakeIkServer(object):
             assert len(results.q_sol) == len(pointwiseTimeSamples)
 
             poses = []
+            info = []
             for i in xrange(len(results.q_sol)):
                 q = results.q_sol[i]
                 q.shape = q.shape[0]
                 poses.append(q)
+                info.append(results.info[i])
 
-            info = results.info[0]
+            info = max(info)
             timeSamples = pointwiseTimeSamples
 
 
@@ -606,7 +609,7 @@ useWarpTime = True
 minPlanTime = 1.5
 acceleration_param=4
 t_acc=0.05
-t_dec=0.2
+t_dec=0.08
 numPointwiseSamples = 20
 
 

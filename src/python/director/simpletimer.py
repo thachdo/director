@@ -3,11 +3,12 @@ import time
 
 class SimpleTimer(object):
 
-    def __init__(self):
+    def __init__(self, timeFunction=None):
+        self.timeFunction = timeFunction or time.time
         self.reset()
 
     def now(self):
-        return time.time()
+        return self.timeFunction()
 
     def elapsed(self):
         return self.now() - self.t0
@@ -26,7 +27,7 @@ class FPSCounter(object):
         newAverage =  self.averageComputer.timer.elapsed() > self.averageComputer.timeWindow
         self.averageComputer.update(1)
         if newAverage and self.printToConsole:
-            print('fps:', self.getAverageFPS())
+            print 'fps:', self.getAverageFPS()
 
     def getAverageFPS(self):
         return self.averageComputer.getAverage()

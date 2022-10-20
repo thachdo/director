@@ -133,6 +133,7 @@ public:
 
   QStringList getBotFrameNames() const;
   QStringList getCameraNames() const;
+  
   void openLCMFile(const QString& filename);
   bool readNextImagesMessage();
 

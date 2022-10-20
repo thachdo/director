@@ -22,9 +22,7 @@ def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
 
 class ConsoleApp(object):
 
-    _startupCallbacks = {}
-    _exitCode = 0
-    _quitTimer = None
+    _startupCallbacks = []
 
     def __init__(self):
         om.init()
@@ -48,19 +46,11 @@ class ConsoleApp(object):
             sys.excepthook = _consoleAppExceptionHook
 
         def onStartup():
-            callbacks = []
-            for priority in sorted(ConsoleApp._startupCallbacks.keys()):
-                callbacks.extend(ConsoleApp._startupCallbacks[priority])
-            for func in callbacks:
+            for func in ConsoleApp._startupCallbacks:
                 try:
                     func()
                 except:
-                    if ConsoleApp.getTestingEnabled():
-                        raise
-                    else:
-                        print traceback.format_exc()
-
-
+                    print traceback.format_exc()
 
         startTimer = TimerCallback(callback=onStartup)
         startTimer.singleShot(0)
@@ -84,28 +74,18 @@ class ConsoleApp(object):
         quitTimer = TimerCallback()
         quitTimer.callback = ConsoleApp.quit
         quitTimer.singleShot(timeoutInSeconds)
-        ConsoleApp._quitTimer = quitTimer
-
-    @staticmethod
-    def getQuitTimer():
-        return ConsoleApp._quitTimer
 
     @staticmethod
     def quit():
-        ConsoleApp.exit(ConsoleApp._exitCode)
+        ConsoleApp.applicationInstance().quit()
 
     @staticmethod
     def exit(exitCode=0):
-        ConsoleApp._exitCode = exitCode
         ConsoleApp.applicationInstance().exit(exitCode)
 
     @staticmethod
     def applicationInstance():
         return QtCore.QCoreApplication.instance()
-
-    @staticmethod
-    def processEvents():
-        QtCore.QCoreApplication.instance().processEvents()
 
     def showObjectModel(self):
 

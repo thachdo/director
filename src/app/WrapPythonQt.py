@@ -3,17 +3,8 @@ import re
 import sys
 import argparse
 
-def wrap(args):
+def wrap(inFileNames, outFileName, exportSymbol, exportHeader, classNamePrefixes, qtClassNamePrefixes, moduleName):
 
-
-    inFileNames = args.input_file
-    outFileName = args.output_file
-    exportSymbol = args.export_symbol
-    exportHeader = args.export_header
-    classNamePrefixes = args.class_prefixes
-    qtClassNamePrefixes = args.qt_class_prefixes
-    moduleName = args.module_name
-    autoClassIncludes = args.auto_class_includes
 
     if not outFileName.endswith('.h'):
         raise Exception('Error: output file extension must be .h')
@@ -124,10 +115,7 @@ def wrap(args):
 
     sortedClasses = list(includeClasses)
     sortedClasses.sort()
-    if autoClassIncludes:
-        includeLines += ['#include "%s.h"' % className for className in sortedClasses]
-
-    classIncludes = "\n".join(includeLines)
+    classIncludes = "\n".join(['#include "%s.h"' % className for className in sortedClasses] + includeLines)
     classRegisters = "\n".join(['    this->registerClassForPythonQt(&%s::staticMetaObject);' % className
                                 for className in sortedClasses if className.startswith(qtClassNamePrefixes)])
 
@@ -160,7 +148,7 @@ public:
     PythonQt::self()->registerClass(metaobject, "%s");
     }
 
-public Q_SLOTS:
+public slots:
 
 %s
 
@@ -183,6 +171,7 @@ public Q_SLOTS:
 
 def main():
 
+
     parser = argparse.ArgumentParser(description='Generate a PythonQt decorator class file from a list of method signatures.')
     parser.add_argument('--input-file', '-i', nargs='+', required=True, help='A text file with method signatures, one per line.')
     parser.add_argument('--output-file', '-o', required=True, help='The output filename.  The file extension should be .h')
@@ -191,11 +180,10 @@ def main():
     parser.add_argument('--export-header', default='', help='A header filename that defines an export symbol.')
     parser.add_argument('--class-prefixes', nargs='*', help='A list of class name prefixes.')
     parser.add_argument('--qt-class-prefixes', nargs='*', help='A list of Qt class name prefixes.')
-    parser.add_argument('--auto-class-includes', action='store_true', help='Automatically generate include statements from class names.')
 
     args = parser.parse_args()
 
-    wrap(args)
+    wrap(args.input_file, args.output_file, args.export_symbol, args.export_header, args.class_prefixes, args.qt_class_prefixes, args.module_name)
 
 if __name__ == '__main__':
     main()

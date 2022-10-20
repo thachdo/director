@@ -20,7 +20,7 @@ class VTKDRCFILTERS_EXPORT vtkDepthImageUtils : public vtkPolyDataAlgorithm
 public:
   static vtkDepthImageUtils *New();
   vtkTypeMacro(vtkDepthImageUtils, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTKDRCFILTERS_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
 
   static void DepthBufferToDepthImage(vtkImageData* depthBuffer, vtkImageData* colorBuffer,
@@ -29,7 +29,7 @@ public:
 
 protected:
   vtkDepthImageUtils();
-  virtual ~vtkDepthImageUtils() VTKDRCFILTERS_OVERRIDE;
+  ~vtkDepthImageUtils();
 
 private:
 

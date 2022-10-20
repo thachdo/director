@@ -1,19 +1,20 @@
-import director.vtkAll as vtk
-from director import vtkNumpy as vnp
-from director.shallowCopy import shallowCopy
+import vtkAll as vtk
+from vtkNumpy import addNumpyToVtk
+from shallowCopy import shallowCopy
 import numpy as np
-
 
 class DebugData(object):
 
     def __init__(self):
         self.append = vtk.vtkAppendPolyData()
 
+
     def write(self, filename):
         writer = vtk.vtkXMLPolyDataWriter()
         writer.SetInputConnection(self.append.GetOutputPort())
         writer.SetFileName(filename)
         writer.Update()
+
 
     def addPolyData(self, polyData, color=[1,1,1], extraLabels=None):
         '''
@@ -28,38 +29,43 @@ class DebugData(object):
         if color is not None:
             colorArray = np.empty((polyData.GetNumberOfPoints(), 3), dtype=np.uint8)
             colorArray[:,:] = np.array(color)*255
-            vnp.addNumpyToVtk(polyData, colorArray, 'RGB255')
+            addNumpyToVtk(polyData, colorArray, 'RGB255')
 
         if extraLabels is not None:
             for labelName, labelValue in extraLabels:
                 extraArray = np.empty((polyData.GetNumberOfPoints(), 1), dtype=type(labelValue))
                 extraArray[:] = labelValue
-                vnp.addNumpyToVtk(polyData, extraArray, labelName)
+                addNumpyToVtk(polyData, extraArray, labelName)
 
-        self.append.AddInputData(polyData)
+        self.append.AddInput(polyData)
+
 
     def addLine(self, p1, p2, radius=0.0, color=[1,1,1]):
+
         line = vtk.vtkLineSource()
         line.SetPoint1(p1)
         line.SetPoint2(p2)
         line.Update()
-        polyData = line.GetOutput()
-        if radius > 0.0:
-            polyData = applyTubeFilter(polyData, radius)
-        self.addPolyData(polyData, color)
+
+        if radius == 0.0:
+            self.addPolyData(line.GetOutput(), color)
+        else:
+            tube = vtk.vtkTubeFilter()
+            tube.SetRadius(radius)
+            tube.SetNumberOfSides(24)
+            tube.CappingOn()
+            tube.SetInputConnection(line.GetOutputPort())
+            tube.Update()
+            self.addPolyData(tube.GetOutput(), color)
 
     def addPolyLine(self, points, isClosed=False, radius=0.0, color=[1,1,1]):
-        pts = vnp.getVtkPointsFromNumpy(np.array(points, dtype=np.float64))
-        polyLine = vtk.vtkPolyLineSource()
-        polyLine.SetPoints(pts)
-        polyLine.SetClosed(isClosed)
-        polyLine.Update()
-        polyData = polyLine.GetOutput()
-        if radius > 0:
-            polyData = applyTubeFilter(polyData, radius)
-        self.addPolyData(polyData, color)
+        for (p1, p2) in zip(points[:-1], points[1:]):
+            self.addLine(p1, p2, radius=radius, color=color)
+        if isClosed:
+            self.addLine(points[-1], points[0], radius=radius, color=color)
 
     def addFrame(self, frame, scale, tubeRadius=0.0):
+
         origin = np.array([0.0, 0.0, 0.0])
         axes = [[scale, 0.0, 0.0], [0.0, scale, 0.0], [0.0, 0.0, scale]]
         colors = [[1,0,0], [0,1,0], [0,0,1]]
@@ -105,6 +111,7 @@ class DebugData(object):
                          height=headLength, color=color, fill=True)
 
     def addSphere(self, center, radius=0.05, color=[1,1,1], resolution=24):
+
         sphere = vtk.vtkSphereSource()
         sphere.SetCenter(center)
         sphere.SetThetaResolution(resolution)
@@ -114,6 +121,7 @@ class DebugData(object):
         self.addPolyData(sphere.GetOutput(), color)
 
     def addCube(self, dimensions, center, color=[1,1,1], subdivisions=0):
+
         bmin = np.array(center) - np.array(dimensions)/2.0
         bmax = np.array(center) + np.array(dimensions)/2.0
         cube = vtk.vtkTessellatedBoxSource()
@@ -122,17 +130,6 @@ class DebugData(object):
         cube.QuadsOn()
         cube.Update()
         self.addPolyData(cube.GetOutput(), color)
-
-    def addPlane(self, origin, normal, width, height, resolution=1, color=[1,1,1]):
-        plane = vtk.vtkPlaneSource()
-        plane.SetOrigin(-width/2.0, -height/2.0, 0.0)
-        plane.SetPoint1(width/2.0, -height/2.0, 0.0)
-        plane.SetPoint2(-width/2.0, height/2.0, 0.0)
-        plane.SetCenter(origin)
-        plane.SetNormal(normal)
-        plane.SetResolution(resolution, resolution)
-        plane.Update()
-        self.addPolyData(plane.GetOutput(), color)
 
     def addCylinder(self, center, axis, length, radius, color=[1,1,1]):
         axis = np.asarray(axis) / np.linalg.norm(axis)
@@ -147,6 +144,7 @@ class DebugData(object):
         self.addSphere(center=center+0.5*length*axis, radius=radius, color=color)
 
     def addTorus(self, radius, thickness, resolution=30):
+
         q = vtk.vtkSuperquadricSource()
         q.SetToroidal(1)
         q.SetSize(radius)
@@ -164,7 +162,7 @@ class DebugData(object):
         transformFilter.Update()
         self.addPolyData(transformFilter.GetOutput())
 
-    def addEllipsoid(self, center, radii, resolution=24, color=[1,1,1]):
+    def addEllipsoid(self, center, radii, color=[1,1,1], alpha=1.0, resolution=24):
         """
         Add an ellipsoid centered at [center] with x, y, and z principal axis radii given by
         radii = [x_scale, y_scale, z_scale]
@@ -186,31 +184,8 @@ class DebugData(object):
         transformFilter.Update()
         self.addPolyData(transformFilter.GetOutput(), color)
 
-    def addPolygon(self, points, color=[1,1,1]):
-        points = vnp.getVtkPointsFromNumpy(np.array(points, dtype=np.float64))
-        polygon = vtk.vtkPolygon()
-        polygon.GetPointIds().SetNumberOfIds(points.GetNumberOfPoints())
-
-        for i in range(points.GetNumberOfPoints()):
-            polygon.GetPointIds().SetId(i, i)
-
-        polyData = vtk.vtkPolyData()
-        polyData.SetPoints(points)
-        polyData.Allocate(1, 1)
-        polyData.InsertNextCell(polygon.GetCellType(), polygon.GetPointIds())
-        self.addPolyData(polyData, color)
-
     def getPolyData(self):
+
         if self.append.GetNumberOfInputConnections(0):
             self.append.Update()
         return shallowCopy(self.append.GetOutput())
-
-
-def applyTubeFilter(polyData, radius, numberOfSides=24):
-    tube = vtk.vtkTubeFilter()
-    tube.SetRadius(radius)
-    tube.SetNumberOfSides(numberOfSides)
-    tube.CappingOn()
-    tube.SetInputData(polyData)
-    tube.Update()
-    return tube.GetOutput()

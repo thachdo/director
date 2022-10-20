@@ -18,6 +18,7 @@ class MainWindowApp(object):
 
         self.mainWindow = QtGui.QMainWindow()
         self.mainWindow.resize(768 * (16/9.0), 768)
+
         self.settings = QtCore.QSettings()
 
         self.fileMenu = self.mainWindow.menuBar().addMenu('&File')
@@ -122,8 +123,8 @@ class MainWindowApp(object):
 
         return action
 
-    def registerStartupCallback(self, func, priority=1):
-        consoleapp.ConsoleApp._startupCallbacks.setdefault(priority, []).append(func)
+    def registerStartupCallback(self, func):
+        consoleapp.ConsoleApp._startupCallbacks.append(func)
 
     def _restoreWindowState(self, key):
         appsettings.restoreState(self.settings, self.mainWindow, key)
@@ -146,8 +147,8 @@ class MainWindowApp(object):
 
 class MainWindowAppFactory(object):
 
-    def __init__(self, disableAntiAlias=False):
-        sefl.disableAntiAlias = disableAntiAlias
+    def __init__(self, disable_anti_alias=False):
+        self.disable_anti_alias = disable_anti_alias
 
     def getComponents(self):
 
@@ -162,14 +163,17 @@ class MainWindowAppFactory(object):
             'Grid': ['View', 'ObjectModel'],
             'MainWindow' : ['View', 'ObjectModel'],
             'AdjustedClippingRange' : ['View'],
-            'ScriptLoader' : ['MainWindow', 'Globals']}
+            'ScriptLoader' : ['MainWindow', 'GlobalModules']}
 
         disabledComponents = []
 
         return components, disabledComponents
 
+    def disableAntiAlias(self):
+        self.disable_anti_alias = True
+
     def initView(self, fields):
-        view = PythonQt.dd.ddQVTKWidgetView(self.disableAntiAlias)
+        view = PythonQt.dd.ddQVTKWidgetView(self.disable_anti_alias)
         applogic._defaultRenderView = view
         applogic.setCameraTerrainModeEnabled(view, True)
         applogic.resetCamera(viewDirection=[-1, -1, -0.3], view=view)
@@ -321,22 +325,13 @@ class MainWindowAppFactory(object):
             for scriptArgs in fields.commandLineArgs.scripts:
                 filename = scriptArgs[0]
                 globalsDict = fields.globalsDict
-                args = dict(__file__=filename,
-                            _argv=scriptArgs,
-                            _fields=fields)
-                prev_args = {}
-                for k, v in args.items():
-                    if k in globalsDict:
-                        prev_args[k] = globalsDict[k]
-                    globalsDict[k] = v
+                prevFile = globalsDict.get('__file__')
+                globalsDict['__file__'] = filename
+                globalsDict['_argv'] = scriptArgs
                 try:
-                    execfile(filename, globalsDict)
+                    execfile(filename, fields.globalsDict)
                 finally:
-                    for k in args.keys():
-                        del globalsDict[k]
-                    for k, v in prev_args.items():
-                        globalsDict[k] = v
-
+                    globalsDict['__file__'] = prevFile
         fields.app.registerStartupCallback(loadScripts)
 
 
@@ -351,7 +346,6 @@ class MainWindowPanelFactory(object):
             'CameraControlPanel' : ['MainWindow'],
             'MeasurementPanel' : ['MainWindow'],
             'OutputConsole' : ['MainWindow'],
-            'UndoRedo' : ['MainWindow'],
             'DrakeVisualizer' : ['MainWindow'],
             'TreeViewer' : ['MainWindow'],
             'LCMGLRenderer' : ['MainWindow']}
@@ -428,30 +422,6 @@ class MainWindowPanelFactory(object):
           cameraControlDock=cameraControlDock
           )
 
-    def initUndoRedo(self, fields):
-
-      undoStack = QtGui.QUndoStack()
-      undoView = QtGui.QUndoView(undoStack)
-      undoView.setEmptyLabel('Start')
-      undoView.setWindowTitle('History')
-      undoDock = fields.app.addWidgetToDock(undoView, QtCore.Qt.LeftDockWidgetArea, visible=False)
-
-      undoAction = undoStack.createUndoAction(undoStack)
-      redoAction = undoStack.createRedoAction(undoStack)
-      undoAction.setShortcut(QtGui.QKeySequence('Ctrl+Z'))
-      redoAction.setShortcut(QtGui.QKeySequence('Ctrl+Shift+Z'))
-
-      fields.app.editMenu.addAction(undoAction)
-      fields.app.editMenu.addAction(redoAction)
-
-      return FieldContainer(
-        undoDock=undoDock,
-        undoStack=undoStack,
-        undoView=undoView,
-        undoAction=undoAction,
-        redoAction=redoAction
-        )
-
     def initDrakeVisualizer(self, fields):
 
         from director import drakevisualizer
@@ -488,9 +458,9 @@ class MainWindowPanelFactory(object):
           )
 
 
-def construct(globalsDict=None, disableAntiAlias=False):
+def construct(globalsDict=None, disable_anti_alias=False):
     fact = ComponentFactory()
-    fact.register(MainWindowAppFactory, disableAntiAlias)
+    fact.register(MainWindowAppFactory, disable_anti_alias)
     fact.register(MainWindowPanelFactory)
     return fact.construct(globalsDict=globalsDict)
 

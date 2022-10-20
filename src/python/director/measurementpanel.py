@@ -26,25 +26,6 @@ class MyEventFilter(vieweventfilter.ViewEventFilter):
         if event.modifiers() == QtCore.Qt.ShiftModifier:
             self.panel.onShiftMouseClick(displayPoint)
 
-
-def computeViewScale(view, position):
-    camera = view.camera()
-    if camera.GetParallelProjection():
-        worldHeight = 2*camera.GetParallelScale()
-    else:
-        mat = camera.GetViewTransformMatrix()
-        cvz = np.zeros(3)
-        cvz[0] = mat.GetElement(2, 0)
-        cvz[1] = mat.GetElement(2, 1)
-        cvz[2] = mat.GetElement(2, 2)
-
-        cameraPosition = np.array(camera.GetPosition())
-        v = cameraPosition - np.array(position)
-        worldHeight = 2*(np.dot(v, cvz) * np.tan(0.5*camera.GetViewAngle()/57.296))
-    windowHeight = view.renderer().GetSize()[1]
-    return worldHeight / windowHeight
-
-
 class MeasurementPanel(uipanel.UiPanel):
 
     def __init__(self, app, view):
@@ -105,7 +86,7 @@ class MeasurementPanel(uipanel.UiPanel):
         else:
             return om.findObjectByName(name)
 
-    def makeSphere(self, position, radius=1.0):
+    def makeSphere(self, position, radius=0.0075):
         d = DebugData()
         d.addSphere(position, radius=radius)
         return d.getPolyData()
@@ -116,18 +97,11 @@ class MeasurementPanel(uipanel.UiPanel):
 
         p = np.array([float(x) for x in self.ui.pickPt.text.split(', ')])
         self.pickPoints.append(p)
-        polyData = self.makeSphere((0,0,0))
+        polyData = self.makeSphere(p)
         folder = self.getRootFolder()
         i = len(folder.children())
         obj = vis.showPolyData(polyData, 'point %d' % i, color=[1,0,0], parent=folder)
         obj.actor.SetPickable(False)
-
-        scale = computeViewScale(self.view, p)
-        scale = scale * 10
-        t = vtk.vtkTransform()
-        t.Translate(p)
-        t.Scale(scale, scale, scale)
-        obj.actor.SetUserTransform(t)
 
     def snapshotText(self):
         if not self.pickIsValid():
@@ -188,19 +162,11 @@ class MeasurementPanel(uipanel.UiPanel):
         self.ui.displayPt.text = '%d, %d' % tuple(displayPoint)
         self.ui.worldPt.text = '%.5f, %.5f, %.5f' % tuple(worldPoint)
         self.ui.pickPt.text = '%.5f, %.5f, %.5f' % tuple(worldPoint)
-
-        if normal is not None:
-          self.ui.pickNormal.text = '%.5f, %.5f, %.5f' % tuple(normal)
-        else:
-          self.ui.pickNormal.text = 'not available'
-
-        scale = computeViewScale(self.view, worldPoint)
-        scale = scale * 10
+        self.ui.pickNormal.text = '%.5f, %.5f, %.5f' % tuple(normal)
 
         self.annotation.setProperty('Visible', prop is not None)
         t = vtk.vtkTransform()
         t.Translate(worldPoint)
-        t.Scale(scale, scale, scale)
         self.annotation.actor.SetUserTransform(t)
         self.annotation._renderAllViews()
 

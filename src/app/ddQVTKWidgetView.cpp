@@ -1,33 +1,33 @@
 #include "ddQVTKWidgetView.h"
 #include "ddFPSCounter.h"
 
-#include "vtkSimpleActorInteractor.h"
 #include "vtkTDxInteractorStyleCallback.h"
+#include "vtkSimpleActorInteractor.h"
 
-#include <vtkActor.h>
-#include <vtkAxesActor.h>
 #include <vtkBoundingBox.h>
-#include <vtkCaptionActor2D.h>
-#include <vtkConeSource.h>
-#include <vtkEventQtSlotConnect.h>
-#include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkInteractorStyle.h>
-#include <vtkInteractorStyleRubberBand3D.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkLight.h>
-#include <vtkLightCollection.h>
-#include <vtkLightKit.h>
-#include <vtkObjectFactory.h>
-#include <vtkOrientationMarkerWidget.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkInteractorStyle.h>
+#include <vtkLight.h>
+#include <vtkLightKit.h>
+#include <vtkLightCollection.h>
+#include <vtkObjectFactory.h>
+#include <vtkActor.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkConeSource.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkInteractorStyleRubberBand3D.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkAxesActor.h>
+#include <vtkEventQtSlotConnect.h>
+#include <vtkCaptionActor2D.h>
 #include <vtkTextProperty.h>
 
-#include <QTimer>
+#include <QVTKWidget.h>
 #include <QVBoxLayout>
+#include <QTimer>
 
 //-----------------------------------------------------------------------------
 class vtkCustomRubberBandStyle : public vtkInteractorStyleRubberBand3D
@@ -37,13 +37,13 @@ public:
   static vtkCustomRubberBandStyle *New();
   vtkTypeMacro(vtkCustomRubberBandStyle, vtkInteractorStyleRubberBand3D);
 
-  virtual void OnRightButtonDown() DD_APP_OVERRIDE
+  virtual void OnRightButtonDown()
   {
     if(this->Interaction == NONE)
       {
       this->Interaction = ZOOMING;
       this->FindPokedRenderer(
-        this->Interactor->GetEventPosition()[0],
+        this->Interactor->GetEventPosition()[0], 
         this->Interactor->GetEventPosition()[1]);
       this->InvokeEvent(vtkCommand::StartInteractionEvent);
       }
@@ -53,7 +53,6 @@ public:
 
 vtkStandardNewMacro(vtkCustomRubberBandStyle);
 
-bool ddQVTKWidgetView::antiAliasingEnabled = true;
 
 //-----------------------------------------------------------------------------
 class ddQVTKWidgetView::ddInternal
@@ -70,7 +69,7 @@ public:
     this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
-  QVTKOpenGLWidget* VTKWidget;
+  QVTKWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
@@ -93,50 +92,44 @@ public:
 
 
 //-----------------------------------------------------------------------------
-ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent, bool disableAntiAlias ) : ddViewBase(parent)
+ddQVTKWidgetView::ddQVTKWidgetView(bool disable_anti_alias, QWidget* parent) : ddViewBase(parent)
+{
+  init(disable_anti_alias);
+}
+
+ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
+{
+  init(false);
+}
+
+void ddQVTKWidgetView::init(bool disable_anti_alias)
 {
   this->Internal = new ddInternal;
 
   QVBoxLayout* layout = new QVBoxLayout(this);
   layout->setMargin(0);
-  this->Internal->VTKWidget = new QVTKOpenGLWidget;
+  this->Internal->VTKWidget = new QVTKWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-  this->Internal->RenderWindow =
-    vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-#else
   this->Internal->VTKWidget->SetUseTDx(true);
+
   this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-  if( disableAntiAlias ){
+  if (disable_anti_alias)
     this->Internal->RenderWindow->SetMultiSamples(0);
-  }else{
+  else
     this->Internal->RenderWindow->SetMultiSamples(8);
-  }
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
-#endif
-  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
-
-  if (antiAliasingEnabled){
-    this->Internal->RenderWindow->SetMultiSamples(8);
-  } else {
-    this->Internal->RenderWindow->SetMultiSamples(0);
-  }
-
   this->Internal->RenderWindow->StereoCapableWindowOn();
   this->Internal->RenderWindow->SetStereoTypeToRedBlue();
   this->Internal->RenderWindow->StereoRenderOff();
   this->Internal->RenderWindow->StereoUpdate();
-  this->Internal->RenderWindow->SetSize(width(), height());
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 
   this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();
   this->Internal->LightKit->SetKeyLightWarmth(0.5);
   this->Internal->LightKit->SetFillLightWarmth(0.5);
 
-  this->Internal->TDxInteractor =
-    vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
-  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor(
-    )->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
+  this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
+  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
   //this->Internal->RenderWindow->SetNumberOfLayers(2);
 
@@ -146,9 +139,6 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent, bool disableAntiAlias ) : dd
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
   //this->Internal->Renderer->SetLayer(1);
   this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
-
-
-
 
   vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
 
@@ -165,7 +155,7 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent, bool disableAntiAlias ) : dd
 
   this->connect(&this->Internal->RenderTimer, SIGNAL(timeout()), SLOT(onRenderTimer()));
   this->Internal->RenderTimer.start();
-  this->setLightKitEnabled(true);
+  this->setLightKitEnabled(true); 
 }
 
 //-----------------------------------------------------------------------------
@@ -212,15 +202,9 @@ vtkLightKit* ddQVTKWidgetView::lightKit() const
 }
 
 //-----------------------------------------------------------------------------
-QVTKOpenGLWidget* ddQVTKWidgetView::vtkWidget() const
+QVTKWidget* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
-}
-
-//-----------------------------------------------------------------------------
-QTimer* ddQVTKWidgetView::renderTimer() const
-{
-  return &this->Internal->RenderTimer;
 }
 
 //-----------------------------------------------------------------------------
@@ -265,12 +249,6 @@ void ddQVTKWidgetView::onRenderTimer()
 double ddQVTKWidgetView::getAverageFramesPerSecond()
 {
   return this->Internal->FPSCounter.averageFPS();
-}
-
-//-----------------------------------------------------------------------------
-void ddQVTKWidgetView::setAntiAliasing(bool enabled)
-{
-  antiAliasingEnabled = enabled;
 }
 
 //-----------------------------------------------------------------------------

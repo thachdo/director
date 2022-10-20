@@ -35,7 +35,6 @@ public:
     this->mEmitMessages = true;
     this->mNotifyAllMessages = false;
     this->mRequiredElapsedMilliseconds = 0;
-    this->mTimer.start();
     this->connect(this, SIGNAL(messageReceivedInQueue(const QString&)), SLOT(onMessageInQueue(const QString&)));
   }
 
@@ -45,7 +44,7 @@ public:
 
   virtual void subscribe(lcm::LCM* lcmHandle)
   {
-    mSubscription = lcmHandle->subscribe(mChannel.toLocal8Bit().data(), &ddLCMSubscriber::messageHandler, this);
+    mSubscription = lcmHandle->subscribe(mChannel.toAscii().data(), &ddLCMSubscriber::messageHandler, this);
   }
 
   virtual void unsubscribe(lcm::LCM* lcmHandle)

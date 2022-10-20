@@ -26,7 +26,7 @@ def clipRange(dataObj, arrayName, thresholdRange):
     dataObj.GetPointData().SetScalars(dataObj.GetPointData().GetArray(arrayName))
 
     f = vtk.vtkClipPolyData()
-    f.SetInputData(dataObj)
+    f.SetInput(dataObj)
     f.SetValue(thresholdRange[0])
     f.SetInputArrayToProcess(0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
 
@@ -124,7 +124,7 @@ class ImageManager(object):
 
         image = vtk.vtkImageData()
         tex = vtk.vtkTexture()
-        tex.SetInputData(image)
+        tex.SetInput(image)
         tex.EdgeClampOn()
         tex.RepeatOff()
 
@@ -135,7 +135,7 @@ class ImageManager(object):
 
     def writeImage(self, imageName, outFile):
         writer = vtk.vtkPNGWriter()
-        writer.SetInputData(self.images[imageName])
+        writer.SetInput(self.images[imageName])
         writer.SetFileName(outFile)
         writer.Write()
 
@@ -402,7 +402,7 @@ class ImageWidget(object):
 
         self.flip = vtk.vtkImageFlip()
         self.flip.SetFilteredAxis(1)
-        self.flip.SetInputData(imageManager.getImage(imageName))
+        self.flip.SetInput(imageManager.getImage(imageName))
         imageRep.SetImage(self.flip.GetOutput())
 
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
@@ -442,7 +442,7 @@ class ImageWidget(object):
 
     def setImageName(self, imageName):
         self.imageName = imageName
-        self.flip.SetInputData(imageManager.getImage(imageName))
+        self.flip.SetInput(imageManager.getImage(imageName))
 
     def setOpacity(self, opacity=1.0):
         self.imageWidget.GetRepresentation().GetImageProperty().SetOpacity(opacity)
@@ -492,7 +492,6 @@ class CameraImageView(object):
         self.imageInitialized = False
         self.updateUtime = 0
         self.useImageColorMap = False
-        self.imageMapToColors = None
         self.initView(view)
         self.initEventFilter()
 
@@ -562,7 +561,7 @@ class CameraImageView(object):
         self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
 
         self.imageActor = vtk.vtkImageActor()
-        self.imageActor.SetInputData(self.getImage())
+        self.imageActor.SetInput(self.getImage())
         self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
 
@@ -622,39 +621,39 @@ class CameraImageView(object):
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
-        self.imageActor.SetInputData(self.imageManager.getImage(self.imageName))
+        self.imageActor.SetInput(self.imageManager.getImage(self.imageName))
         self.imageActor.SetVisibility(False)
         self.view.render()
 
     def initImageColorMap(self):
 
-        self.depthImageColorByRange = self.getImage().GetScalarRange()
+        scalarRange = self.getImage().GetScalarRange()
 
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfColors(256)
         lut.SetHueRange(0, 0.667) # red to blue
-        lut.SetRange(self.depthImageColorByRange) # map red (near) to blue (far)
+        lut.SetRange(scalarRange)
         lut.SetRampToLinear()
         lut.Build()
 
         im = vtk.vtkImageMapToColors()
         im.SetLookupTable(lut)
-        im.SetInputData(self.getImage())
+        im.SetInput(self.getImage())
         im.Update()
-        self.depthImageLookupTable = lut
         self.imageMapToColors = im
-        self.imageActor.SetInputData(im.GetOutput())
+        self.imageActor.SetInput(im.GetOutput())
 
     def updateView(self):
 
         if not self.view.isVisible():
             return
 
-        if self.useImageColorMap and self.imageMapToColors:
-            self.imageMapToColors.Update()
-
         currentUtime = self.imageManager.updateImage(self.imageName)
         if currentUtime != self.updateUtime:
+
+            if self.useImageColorMap and self.imageInitialized:
+                self.imageMapToColors.GetLookupTable().SetRange(self.getImage().GetScalarRange())
+
             self.updateUtime = currentUtime
             self.view.render()
 

@@ -100,7 +100,7 @@ DataRep DataRepFromPolyData(vtkPolyData* polyData)
   return rep;
 }
 
-DataRep MakeCircle(double radius, double handleRadius, int axis, bool useTubeFilter)
+DataRep MakeCircle(double radius, int axis, bool useTubeFilter)
 {
 
   vtkSmartPointer<vtkRegularPolygonSource> c = vtkSmartPointer<vtkRegularPolygonSource>::New();
@@ -110,9 +110,19 @@ DataRep MakeCircle(double radius, double handleRadius, int axis, bool useTubeFil
   c->SetCenter(0,0,0);
   c->Update();
 
+
+/*
+  vtkSmartPointer<vtkArcSource> c = vtkSmartPointer<vtkArcSource>::New();
+  c->SetResolution(32);
+  c->SetCenter(0,0,0);
+  c->SetPoint1(radius,0,0);
+  c->SetPoint2(0,radius,0);
+  c->Update();
+*/
+
   vtkSmartPointer<vtkTubeFilter> f = vtkSmartPointer<vtkTubeFilter>::New();
   f->SetInputConnection(c->GetOutputPort());
-  f->SetRadius(handleRadius);
+  f->SetRadius(0.0025);
   f->SetNumberOfSides(24);
   f->Update();
 
@@ -132,7 +142,7 @@ DataRep MakeCircle(double radius, double handleRadius, int axis, bool useTubeFil
 }
 
 
-DataRep MakeAxis(double length, double handleRadius, int axis, bool useTubeFilter)
+DataRep MakeAxis(double length, int axis, bool useTubeFilter)
 {
   /*
   vtkSmartPointer<vtkArrowSource> c = vtkSmartPointer<vtkArrowSource>::New();
@@ -152,7 +162,7 @@ DataRep MakeAxis(double length, double handleRadius, int axis, bool useTubeFilte
 
   vtkSmartPointer<vtkTubeFilter> f = vtkSmartPointer<vtkTubeFilter>::New();
   f->SetInputConnection(c->GetOutputPort());
-  f->SetRadius(handleRadius);
+  f->SetRadius(0.0025);
   f->SetNumberOfSides(24);
   f->Update();
 
@@ -187,13 +197,13 @@ DataRep MakeAxis(double length, double handleRadius, int axis, bool useTubeFilte
   return DataRepFromPolyData(Transform(polyData, t));
 }
 
-DataRep MakeDisk(double radius, double handleRadius, int axis)
+DataRep MakeDisk(double radius, int axis)
 {
   vtkSmartPointer<vtkDiskSource> d = vtkSmartPointer<vtkDiskSource>::New();
   d->SetCircumferentialResolution(64);
   d->SetOuterRadius(radius);
-  d->SetInnerRadius(radius - 0.02);
-  d->Update();
+  d->SetInnerRadius(radius - 0.01);
+
 
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
   if (axis == 0)
@@ -253,25 +263,20 @@ public:
     this->Actors.clear();
 
     useTubeFilter = true;
-    double handleRadius = 0.0025;
-    bool useDisk = false;
+    Reps.push_back(MakeCircle(scale, 0, useTubeFilter));
+    Reps.push_back(MakeCircle(scale, 1, useTubeFilter));
+    Reps.push_back(MakeCircle(scale, 2, useTubeFilter));
 
-    if (useDisk)
-      {
-      Reps.push_back(MakeDisk(scale, handleRadius, 0));
-      Reps.push_back(MakeDisk(scale, handleRadius, 1));
-      Reps.push_back(MakeDisk(scale, handleRadius, 2));
-      }
-    else
-      {
-      Reps.push_back(MakeCircle(scale, handleRadius, 0, useTubeFilter));
-      Reps.push_back(MakeCircle(scale, handleRadius, 1, useTubeFilter));
-      Reps.push_back(MakeCircle(scale, handleRadius, 2, useTubeFilter));
-      }
 
-    Axes.push_back(MakeAxis(scale, handleRadius, 0, useTubeFilter));
-    Axes.push_back(MakeAxis(scale, handleRadius, 1, useTubeFilter));
-    Axes.push_back(MakeAxis(scale, handleRadius, 2, useTubeFilter));
+    /*
+    Reps.push_back(MakeDisk(scale, 0));
+    Reps.push_back(MakeDisk(scale, 1));
+    Reps.push_back(MakeDisk(scale, 2));
+    */
+
+    Axes.push_back(MakeAxis(scale, 0, useTubeFilter));
+    Axes.push_back(MakeAxis(scale, 1, useTubeFilter));
+    Axes.push_back(MakeAxis(scale, 2, useTubeFilter));
 
     /*
     Reps[0].Actor->GetProperty()->SetColor(1,1,1);
@@ -341,18 +346,6 @@ vtkFrameWidgetRepresentation::vtkFrameWidgetRepresentation()
 vtkFrameWidgetRepresentation::~vtkFrameWidgetRepresentation()
 {
   delete this->Internal;
-}
-
-//----------------------------------------------------------------------------
-void vtkFrameWidgetRepresentation::SetRotationActor(int axisId, vtkActor* actor)
-{
-  this->Internal->Reps[axisId].Actor = actor;
-  this->Internal->Reps[axisId].Mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
-  this->Internal->Reps[axisId].PolyData = vtkPolyData::SafeDownCast(actor->GetMapper()->GetInput());
-
-  this->Internal->Actors[axisId] = actor;
-  actor->SetUserTransform(this->Internal->Transform);
-  this->Internal->InitPicker();
 }
 
 //----------------------------------------------------------------------
